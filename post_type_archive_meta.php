@@ -1,12 +1,12 @@
 <?php
 /*
-Plugin Name: AddArchiveDesctiption
+Plugin Name: PostTypeArchiveMeta
 Description: ex. You will be able to add data to the custom post type's archive page.
 Version:0.2
 Author:Yuya Tajima
 */
 
-class AddArchiveDesctiption
+class PostTypeArchiveMeta
 {
 	protected static $plugin_name;
 
@@ -213,9 +213,9 @@ class AddArchiveDesctiption
 	}
 }
 
-new AddArchiveDesctiption;
+new PostTypeArchiveMeta;
 
 
 function get_post_type_info($type, $post_type){
-	return AddArchiveDesctiption::getOption($type, $post_type);
+	return PostTypeArchiveMeta::getOption($type, $post_type);
 }
