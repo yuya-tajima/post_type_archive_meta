@@ -1,221 +1,273 @@
 <?php
 /*
 Plugin Name: PostTypeArchiveMeta
-Description: ex. You will be able to add data to the custom post type's archive page.
-Version:0.2
-Author:Yuya Tajima
+Description: You will be able to add data to the custom post type's archive page.
+Version:1.0.0
+Author:Yuya Tajima ( Prime Strategy Co.,Ltd. )
+Author URI: http://tajima-taso.jp
+Plugin URI: https://github.com/yuya-tajima/post_type_archive_meta
+Text Domain: post_type_archive_meta
+Domain Path: /languages
+License: GPLv2 or later
 */
 
-class PostTypeArchiveMeta
-{
-	protected static $plugin_name;
+if ( ! defined( 'ABSPATH' ) ) exit;
 
-	protected $plugin_title;
-
-	protected $plugin_data;
-
-	protected $main_menu_slug;
-	protected $main_page_nonce;
-
-	protected $post_types = '';
-	protected $updates;
-
-	const CAPABILITY         = 'level_7';
-	const MAIN_INIT_CALLBACK = 'addSettingMenu';
-
-	const MAIN_PAGE_SLUG    = 'main';
-	const MAIN_PAGE_TITLE   = 'ディスクリプション';
-	const MAIN_PAGE_DESC    = 'のアーカイブにディスクリプションを設定します。';
-	const MAIN_CALLBACK     = 'setPage';
-	const MAIN_NONCE_NAME   = 'main-nonce-name';
-	const MAIN_NONCE_ACTION = 'main-nonce-action';
-	const MAIN_PAGE_SUBMIT  = 'Save';
-	const MAIN_EXEC_FUNC    = 'execAction';
-	const MAIN_ADMIN_STYLE  = 'adminPrintStyle';
-	const THIS_PAGE         = 'thispage';
-
-	const NONCE_NAME   = 'nonce_name';
-	const NONCE_ACTION = 'nonce_action';
-
-	const SUBMIT_NAME = 'submit';
-
-	const DESC         = 'description';
-	const META_DESC    = 'meta_description';
-	const META_KEYWORD = 'meta_keyword';
-
-	const POST_TYPE = 'post_type';
-
-	public function __construct()
-	{
-		self::$plugin_name = strtolower(get_called_class());
-		$this->plugin_data = get_file_data(__FILE__, array('pluginname' => 'Plugin Name', 'version' => 'Version'));
-
-		$this->mainPageInit();
-	}
-
-	protected function mainPageInit()
-	{
-		add_action('init', array($this, 'init'), 1000);
-		$this->main_menu_slug = self::$plugin_name . '-' . self::MAIN_PAGE_SLUG;
-		$this->plugin_title = __(self::MAIN_PAGE_TITLE);
-		$this->main_page_nonce = $this->createNonce(self::MAIN_NONCE_ACTION, self::MAIN_NONCE_NAME);
-		add_action('admin_menu', array($this, self::MAIN_INIT_CALLBACK));
-		add_action('admin_init', array($this, self::MAIN_EXEC_FUNC));
-		add_action('admin_print_scripts', array($this, self::MAIN_ADMIN_STYLE));
-	}
-
-	public function init()
-	{
-		$this->post_types = get_post_types(array('has_archive' => true));
-		$this->updates    = array(self::DESC, self::META_DESC, self::META_KEYWORD);
-	}
-
-	public function addSettingMenu()
-	{
-		foreach($this->post_types as $post_type){
-			add_submenu_page( 'edit.php?post_type=' . $post_type, $this->plugin_title, $this->plugin_title, self::CAPABILITY, $this->setPageSlug($post_type), array($this, self::MAIN_CALLBACK));
-		}
-	}
-
-	protected function isSetPost()
-	{
-		foreach($this->updates as $v){
-			if(! isset($_POST[$v])){
-				return false;
-			}
-		}
-		return true;
-	}
-
-	public function execAction()
-	{
-		$_POST = stripslashes_deep( $_POST );
-
-		if(is_admin() && $this->isSetPost()){
-
-			$this->check_admin_referer($this->createNonce($_POST[self::THIS_PAGE], $_POST[self::POST_TYPE]));
-			foreach($this->updates as $v){
-				$result = add_option(self::getOptionKey($v, $_POST[self::POST_TYPE]), $_POST[$v], '', 'no');
-				if(! $result){
-					update_option(self::getOptionKey($v, $_POST[self::POST_TYPE]), $_POST[$v]);
-				}
-			}
-		}
-	}
-
-	public function setPage()
-	{
-		global $plugin_page;
-
-		if(isset($_GET['post_type'])){
-			$post_type = $_GET['post_type'];
-			$title = $this->setPagetitle($_GET['post_type']);
-		}else{
-			wp_die('Don\'t allow');
-		}
-?>
-		<div class="wrap">
-			<h2><?php echo __($title . self::MAIN_PAGE_TITLE); ?></h2>
-			<form action="" method="post">
-			<h3><?php echo __($title . self::MAIN_PAGE_DESC); ?></h3>
-			<div class="form-field">
-				<h4>説明文</h4>
-				<textarea cols="40" rows="5" name="<?php echo esc_attr(self::DESC); ?>"><?php echo $this->getOption(self::DESC, $post_type); ?></textarea>
-				<h4>メタディスクリプション</h4>
-				<textarea cols="40" rows="5" name="<?php echo esc_attr(self::META_DESC); ?>"><?php echo $this->getOption(self::META_DESC, $post_type); ?></textarea>
-				<h4>メタキーワード</h4>
-				<textarea cols="40" rows="5" name="<?php echo esc_attr(self::META_KEYWORD); ?>"><?php echo $this->getOption(self::META_KEYWORD, $post_type); ?></textarea>
-			</div>
-			<input type="hidden" name="<?php echo self::THIS_PAGE; ?>" value="<?php echo esc_attr($plugin_page); ?>" />
-			<input type="hidden" name="<?php echo self::POST_TYPE; ?>" value="<?php echo esc_attr($post_type); ?>" />
-			<?php $this->createNonceField($this->createNonce($plugin_page, $post_type)); ?>
-			<?php submit_button(__(self::MAIN_PAGE_SUBMIT)); ?>
-			</form>
-		<div><!-- .wrap -->
-<?php
-	}
-
-
-	public static function getOption($type, $post_type)
-	{
-		return get_option(self::getOptionKey($type, $post_type));
-	}
-
-	protected static function getOptionKey($type, $post_type)
-	{
-		return self::$plugin_name . '-' . $type . '-' . $post_type;
-	}
-
-	protected function echoMessage($status, $msg)
-	{
-		printf('<div class="%1$s fade"><p><strong>%2$s</strong></p></div>', $status, $msg);
-	}
-
-	protected function createNonce($action, $name)
-	{
-		$_action = self::$plugin_name . '-' . $action;
-		$_name = self::$plugin_name . '-' . $name;
-
-		return array( self::NONCE_ACTION =>  $_action, self::NONCE_NAME => $_name);
-	}
-
-	protected function check_admin_referer($nonce)
-	{
-		check_admin_referer($nonce[self::NONCE_ACTION], $nonce[self::NONCE_NAME]);
-	}
-
-	protected function createNonceField($nonce)
-	{
-		wp_nonce_field($nonce[self::NONCE_ACTION], $nonce[self::NONCE_NAME]);
-	}
-
-	protected function isThisPage($page)
-	{
-		global $plugin_page;
-
-		if( !isset($plugin_page) || ($plugin_page !== $page)){
-			return false;
-		}else{
-			return true;
-		}
-	}
-
-	protected function setFormName($arr)
-	{
-		array_unshift($arr, self::$plugin_name);
-		$str = implode('-', $arr);
-
-		return $str;
-	}
-
-	protected function setPageSlug($slug)
-	{
-		return self::$plugin_name . '-' . $slug;
-	}
-
-	protected function setPagetitle($title)
-	{
-		return get_post_type_object($title)->label;
-	}
-
-	public function adminPrintStyle()
-	{
-		if(! $this->isThisPage($this->main_menu_slug)){
-			return;
-		}
-?>
-		<style type="text/css">
-			h3 {
-				color:#424242;
-			}
-		</style>
-<?php
-	}
+if ( class_exists( 'PostTypeArchiveMeta' ) ) {
+  return;
 }
 
-new PostTypeArchiveMeta;
+require __DIR__ . '/includes/class-plugin-helper.php';
 
+class PostTypeArchiveMeta extends DtPluginHelper
+{
+  private $plugin_title;
+  private $post_types = array();
+  private $is_update  = false;
 
-function get_post_type_info($type, $post_type){
-	return PostTypeArchiveMeta::getOption($type, $post_type);
+  const TEXT_DOMAIN      = 'post_type_archive_meta';
+  const CAPABILITY       = 'level_7';
+
+  const MAIN_PAGE_TITLE  = 'Meta Data';
+  const MAIN_PAGE_DESC   = 'Addition data for %s';
+  const MAIN_CALLBACK    = 'setAdminFormPage';
+
+  const THIS_PAGE_KEY    = 'ptam-thispluginpage';
+  const H1_WORDS_KEY     = 'h1';
+  const DESC_KEY         = 'description';
+  const CONT_KEY         = 'content';
+  const META_TITLE_KEY   = 'meta_title';
+  const META_DESC_KEY    = 'meta_description';
+  const META_KEYWORD_KEY = 'meta_keyword';
+  const IMAGE_KEY        = 'image';
+  const POST_TYPE_KEY    = 'ptam_post_type';
+
+  protected function __construct()
+  {
+    parent::__construct();
+
+    load_plugin_textdomain( static::TEXT_DOMAIN, false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
+    $this->plugin_title = __( static::MAIN_PAGE_TITLE, static::TEXT_DOMAIN );
+
+    add_action( 'init',                  array( $this, 'postTypesInit' ), 99999 );
+    add_action( 'admin_menu',            array( $this, 'menuInit' ) );
+  }
+
+  public function postTypesInit ()
+  {
+    $post_types       = get_post_types( array( 'has_archive' => true ) );
+    $this->post_types = apply_filters( 'post_type_archive_meta_post_types', $post_types );
+  }
+
+  public function menuInit()
+  {
+    if ( ! $this->post_types ) {
+      return;
+    }
+
+    foreach( $this->post_types as $post_type ){
+
+      $parent_slug = 'edit.php?post_type=' . $post_type;
+      $menu_slug   = $this->getPageSlug( $post_type );
+
+      add_submenu_page(
+        $parent_slug,
+        $this->plugin_title,
+        $this->plugin_title,
+        static::CAPABILITY,
+        $menu_slug,
+        array( $this, static::MAIN_CALLBACK )
+      );
+
+      add_action( 'load-' . get_plugin_page_hookname( $menu_slug, $parent_slug ), array( $this, 'enqueueResource' ) );
+      add_action( 'load-' . get_plugin_page_hookname( $menu_slug, $parent_slug ), array( $this, 'update' ) );
+    }
+  }
+
+  public function enqueueResource ()
+  {
+    add_action( 'admin_print_scripts',   array( $this, 'adminPrintStyle' ) );
+    add_action( 'admin_enqueue_scripts', array( $this, 'enqueueScripts' ) );
+  }
+
+  public function update()
+  {
+    if( ! is_admin() ){
+      return;
+    }
+
+    if ( empty( $_POST ) ) {
+      return;
+    }
+
+    $update_names = array(
+      static::H1_WORDS_KEY,
+      static::DESC_KEY,
+      static::CONT_KEY,
+      static::META_DESC_KEY,
+      static::META_KEYWORD_KEY,
+      static::META_TITLE_KEY,
+      static::IMAGE_KEY,
+      static::THIS_PAGE_KEY,
+      static::POST_TYPE_KEY,
+    );
+
+    $this->setUpdateNames( apply_filters( 'post_type_archive_meta_update_names', $update_names ) );
+
+    if ( $this->isSetPostData() ) {
+
+      $_POST = stripslashes_deep( $_POST );
+
+      $this->check_admin_referer( $this->createNonce( $_POST[static::THIS_PAGE_KEY], $_POST[static::POST_TYPE_KEY] ) );
+
+      foreach( $this->getUpdateNames() as $v ){
+
+        $_POST[$v] = trim( $_POST[$v] );
+
+        if ( $_POST[$v] === '' ) {
+          delete_option( $this->getDataKey( $v, $_POST[static::POST_TYPE_KEY] ) );
+        } else {
+          $result = add_option( $this->getDataKey( $v, $_POST[static::POST_TYPE_KEY] ), $_POST[$v], '', 'no' );
+          if( ! $result ){
+            update_option( $this->getDataKey( $v, $_POST[static::POST_TYPE_KEY] ), $_POST[$v] );
+          }
+        }
+      }
+      do_action( 'post_type_archive_meta_update_after' );
+
+      $this->is_update = true;
+    }
+
+    add_action( 'ptam_update_msg', array( $this, 'updateMsg' ) );
+  }
+
+  public function updateMsg ()
+  {
+    if ( $this->is_update ) {
+      $status = 'updated';
+      $msg    = 'Success!';
+    } else {
+      $status = 'error';
+      $msg    = 'Failure!';
+    }
+
+    $this->echoMessage( $status, $msg );
+  }
+
+  protected function getDataKey( $key, $post_type )
+  {
+    return static::getRootSlug() . '-' . $key . '-' . $post_type;
+  }
+
+  public function getData( $key, $post_type )
+  {
+    return get_option( $this->getDataKey( $key, $post_type ) );
+  }
+
+  protected function getPageTitle( $post_type )
+  {
+    return get_post_type_object( $post_type )->label;
+  }
+
+  public function adminPrintStyle()
+  {
+    ?>
+      <style type="text/css">
+      h3 {
+        color:#424242;
+      }
+      .ptam-image-area {
+        margin-bottom:10px;
+      }
+    </style>
+      <?php
+  }
+
+  public function getImage ( $key, $post_type, $size = 'full', $icon = false, $attr = array() )
+  {
+    $image_id = $this->getData( $key, $post_type );
+
+    if ( ! $image_id ) {
+      return '';
+    }
+
+    $image_html = wp_get_attachment_image( $image_id, $size, $icon, $attr );
+
+    return $image_html;
+  }
+
+  public function enqueueScripts ()
+  {
+    wp_enqueue_script( 'ptam-js', plugin_dir_url( __FILE__ ) . 'js/script.js', array( 'jquery' ), '', true );
+  }
+
+  public function setAdminFormPage()
+  {
+    global $plugin_page;
+
+    // exception may not be thrown. just making sure.
+    try {
+      if( is_admin() && ! empty( $_GET['post_type'] ) ){
+        if ( ! in_array( $_GET['post_type'], $this->post_types, true ) ) {
+          throw new Exception( 'You don\'t have permission to access this page.' );
+        }
+        $post_type  = $_GET['post_type'];
+        $page_title = $this->getPageTitle( $post_type );
+      } else {
+        throw new Exception( 'You don\'t have permission to access this page.' );
+      }
+    } catch ( Exception $e ) {
+      wp_die( esc_html( $e->getMessage() ) );
+    }
+
+    wp_enqueue_media();
+
+    ?>
+      <div class="wrap ptam-wrap">
+        <h2><?php echo esc_html( $page_title . ' ' . __( static::MAIN_PAGE_TITLE, static::TEXT_DOMAIN ) ); ?></h2>
+        <?php do_action( 'ptam_update_msg', array( $this, 'updateMsg' ) ); ?>
+
+        <form action="" method="post">
+          <h3><?php echo esc_html( sprintf( __( static::MAIN_PAGE_DESC, static::TEXT_DOMAIN ), $page_title ) ); ?></h3>
+          <p><?php echo __( 'Usage', static::TEXT_DOMAIN ); ?>: get_post_type_meta( $key, $post_type ). <?php echo __( 'use the following key nemes.', static::TEXT_DOMAIN );  ?></p>
+          <div class="form-field">
+            <h4><?php echo __( 'H1', static::TEXT_DOMAIN );  ?> ( key name is <?php echo esc_html( static::H1_WORDS_KEY ); ?>)</h4>
+            <textarea cols="40" rows="5" name="<?php echo esc_attr( static::H1_WORDS_KEY ); ?>"><?php echo esc_textarea( $this->getData( static::H1_WORDS_KEY, $post_type ) ); ?></textarea>
+              <h4><?php echo __( 'Description', static::TEXT_DOMAIN ); ?> ( key name is <?php echo esc_html( static::DESC_KEY ); ?>)</h4>
+            <textarea cols="40" rows="5" name="<?php echo esc_attr( static::DESC_KEY ); ?>"><?php echo esc_textarea( $this->getData( static::DESC_KEY, $post_type ) ); ?></textarea>
+            <h4><?php echo __( 'Content', static::TEXT_DOMAIN );  ?> ( key name is <?php echo esc_html( static::CONT_KEY ); ?>)</h4>
+            <?php wp_editor( $this->getData( static::CONT_KEY, $post_type ), static::CONT_KEY, array( 'editor_class' => 'ptam-editor' , 'textarea_rows' => 20 ) ); ?>
+            <h4><?php echo __( 'Meta Title', static::TEXT_DOMAIN ); ?> ( key name is <?php echo esc_html( static::META_TITLE_KEY); ?>)</h4>
+            <textarea cols="40" rows="5" name="<?php echo esc_attr( static::META_TITLE_KEY ); ?>"><?php echo esc_textarea( $this->getData( static::META_TITLE_KEY, $post_type ) ); ?></textarea>
+            <h4><?php echo __( 'Meta Description', static::TEXT_DOMAIN ); ?> ( key name is <?php echo esc_html( static::META_DESC_KEY ); ?>)</h4>
+            <textarea cols="40" rows="5" name="<?php echo esc_attr( static::META_DESC_KEY ); ?>"><?php echo esc_textarea( $this->getData( static::META_DESC_KEY, $post_type ) ); ?></textarea>
+            <h4><?php echo __( 'Meta Keyword', static::TEXT_DOMAIN ); ?> ( key name is <?php echo esc_html( static::META_KEYWORD_KEY ); ?>)</h4>
+            <textarea cols="40" rows="5" name="<?php echo esc_attr( static::META_KEYWORD_KEY ); ?>"><?php echo esc_textarea( $this->getData( static::META_KEYWORD_KEY, $post_type ) ); ?></textarea>
+            <div>
+              <h4><?php echo __( 'Image', static::TEXT_DOMAIN ); ?> ( key name is <?php echo esc_html( static::IMAGE_KEY );  ?>) Note. get attachment id.</h4>
+              <div class="ptam-image-area"><?php echo $this->getImage( static::IMAGE_KEY, $post_type );  ?></div>
+              <input type="button" class="ptam-upload-btn button-secondary" value="<?php echo __( 'Upload Image', static::TEXT_DOMAIN ); ?>" />
+              <input type="button" class="ptam-delete-btn button-secondary" value="<?php echo __( 'Delete Image', static::TEXT_DOMAIN ); ?>" />
+              <input type="hidden" class="ptam-image-id" name="<?php echo esc_attr( static::IMAGE_KEY ); ?>" value="<?php echo esc_attr( $this->getData( static::IMAGE_KEY, $post_type ) ); ?>" />
+            </div>
+
+            <?php do_action( 'post_type_archive_meta_form_after' ); ?>
+
+          </div>
+
+          <?php $this->createNonceField( $this->createNonce( $plugin_page, $post_type ), array( static::THIS_PAGE_KEY => $plugin_page, static::POST_TYPE_KEY => $post_type) ); ?>
+          <?php submit_button( __( static::PAGE_SUBMIT ) ); ?>
+
+        </form>
+      <div>
+      <?php
+  }
+}
+
+PostTypeArchiveMeta::getInstance();
+
+if ( ! function_exists( 'get_post_type_meta' ) ) {
+  function get_post_type_meta( $key, $post_type ){
+    return PostTypeArchiveMeta::getInstance()->getData( $key, $post_type );
+  }
 }

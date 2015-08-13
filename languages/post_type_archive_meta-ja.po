@@ -1,0 +1,54 @@
+# Copyright (C) 2015 WordPress
+# This file is distributed under the same license as the WordPress package.
+msgid ""
+msgstr ""
+"Project-Id-Version: PostTypeArchiveMeta\n"
+"Report-Msgid-Bugs-To: https://make.wordpress.org/polyglots\n"
+"POT-Creation-Date: 2015-08-11 17:11:38+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-08-13 12:52+0900\n"
+"Last-Translator: Yuya Tajima <tajimataso@gmail.com>\n"
+"Language-Team: \n"
+"X-Generator: Poedit 1.5.7\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+
+msgid "You will be able to add data to the custom post type's archive page."
+msgstr "カスタム投稿タイプのアーカイブページに情報を追加できます。"
+
+msgid "Meta Data"
+msgstr "メタデータ"
+
+msgid "Addition data for %s"
+msgstr "%sへの追加データです。"
+
+msgid "use the following key nemes."
+msgstr "以下のkey nameを使ってください。"
+
+msgid "Usage"
+msgstr "使い方"
+
+msgid "Description"
+msgstr "説明文"
+
+msgid "Content"
+msgstr "コンテンツ"
+
+msgid "Meta Title"
+msgstr "メタタイトル"
+
+msgid "Meta Description"
+msgstr "メタディスクリプション"
+
+msgid "Meta Keyword"
+msgstr "メタキーワード"
+
+msgid "Image"
+msgstr "画像"
+
+msgid "Upload Image"
+msgstr "画像をアップロード"
+
+msgid "Delete Image"
+msgstr "画像を削除"
