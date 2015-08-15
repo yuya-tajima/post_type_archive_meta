@@ -12,13 +12,13 @@ You will be able to add data to the custom post type's archive page.
 
 You will be able to add data to the custom post type's archive page or all post types.
 
-== This Plugin API ==
+= This Plugin API =
 
 Retrieve meta data field for a post type.
 
 <code>get_post_type_meta( $key, $post_type )</code>
 
-== Customize ==
+= Customize =
 
 <code>
 add_filter( 'post_type_archive_meta_post_types', 'func_name' )
